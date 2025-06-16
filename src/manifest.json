@@ -6,8 +6,7 @@
   
   "permissions": [
     "activeTab",
-    "scripting",
-    "storage"
+    "scripting"
   ],
   
   "host_permissions": [
@@ -24,8 +23,7 @@
   ],
   
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   
   "devtools_page": "devtools.html",
@@ -36,13 +34,8 @@
   },
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline';"
   },
   
-  "web_accessible_resources": [
-    {
-      "resources": ["*.js", "*.css", "*.html"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "web_accessible_resources": []
 }

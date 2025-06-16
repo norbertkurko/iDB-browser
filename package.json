@@ -12,7 +12,9 @@
     "lint:fix": "eslint src --ext .ts,.tsx,.js,.jsx --fix",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist",
-    "pack": "npm run build && cd dist && zip -r ../extension.zip ."
+    "pack": "npm run build && cd dist && zip -r ../extension.zip .",
+    "build:prod": "npm run clean && npm run build",
+    "build:watch": "npm run clean && npm run dev"
   },
   "dependencies": {
     "clsx": "^2.0.0",

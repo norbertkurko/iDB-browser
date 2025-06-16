@@ -139,22 +139,6 @@ const Popup: React.FC = () => {
     }
   };
 
-  const openDevTools = () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-        // Show a simple alert instead of injecting complex scripts
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'SHOW_DEVTOOLS_NOTIFICATION' 
-        }).catch(() => {
-          // If message fails, just close the popup
-          console.log('Could not send notification');
-        });
-      }
-    });
-    
-    window.close();
-  };
-
   const retryConnection = async () => {
     setError('');
     await loadDatabases();
@@ -389,36 +373,18 @@ const Popup: React.FC = () => {
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer - Simplified */}
       <div style={{
         padding: '16px 20px',
         backgroundColor: '#f8f9fa',
-        borderTop: '1px solid #e9ecef'
+        borderTop: '1px solid #e9ecef',
+        textAlign: 'center'
       }}>
-        <button 
-          onClick={openDevTools}
-          style={{
-            width: '100%',
-            padding: '10px',
-            fontSize: '14px',
-            fontWeight: '500',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            marginBottom: '8px'
-          }}
-        >
-          🔧 Open Advanced Panel
-        </button>
-        
         <div style={{ 
           fontSize: '11px', 
-          color: '#6c757d',
-          textAlign: 'center'
+          color: '#6c757d'
         }}>
-          💡 Use F12 → "IndexedDB Explorer" tab for full features
+          💡 Click on databases above to explore tables and data
         </div>
       </div>
     </div>

@@ -1,12 +1,26 @@
-// vite.config.ts - Fixed PostCSS configuration
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'public/manifest.json',
+          dest: '.'
+        },
+        {
+          src: 'public/popup.html',
+          dest: '.'
+        }
+      ]
+    })
+  ],
   css: {
     postcss: {
       plugins: [
@@ -20,10 +34,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: resolve(__dirname, 'src/popup/popup.tsx'),
-        panel: resolve(__dirname, 'src/panel/enhanced-panel.tsx'),
         background: resolve(__dirname, 'src/background/background.ts'),
-        'content-script': resolve(__dirname, 'src/content/content-script.ts'),
-        'shared-idb-service': resolve(__dirname, 'src/content/shared-idb-service.ts')
+        'content-script': resolve(__dirname, 'src/content/content-script.ts')
       },
       output: {
         entryFileNames: '[name].js',

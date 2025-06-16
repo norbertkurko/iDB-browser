@@ -28,7 +28,7 @@ interface TableDataResponse {
   schema: StoreInfo;
 }
 
-export class SharedIndexedDBService {
+class SharedIndexedDBService {
   
   async getDatabases(): Promise<DatabaseInfo[]> {
     try {

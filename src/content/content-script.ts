@@ -1,11 +1,13 @@
+// Import the service directly as a module
 import { sharedIDBService } from './shared-idb-service';
 
 console.log('IndexedDB Explorer content script loaded');
 
-// Enhanced message handling with CRUD operations
+// Enhanced message handling with proper error handling
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Content script received message:', request);
   
+  // Handle async operations properly
   (async () => {
     try {
       switch (request.action) {
