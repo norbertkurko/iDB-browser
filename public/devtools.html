@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <script>
+    // Create DevTools panel
+    chrome.devtools.panels.create(
+      "IndexedDB Explorer",
+      null,
+      "panel.html",
+      function(panel) {
+        console.log("IndexedDB Explorer panel created");
+      }
+    );
+  </script>
+</body>
+</html>

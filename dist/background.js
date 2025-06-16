@@ -1,0 +1,1 @@
+console.log("IndexedDB Explorer background script loaded");chrome.runtime.onMessage.addListener((e,r,n)=>(console.log("Background received message:",e),e.target==="background"&&n({status:"ok",message:"Background script is running"}),!0));chrome.runtime.onInstalled.addListener(()=>{console.log("IndexedDB Explorer installed")});
