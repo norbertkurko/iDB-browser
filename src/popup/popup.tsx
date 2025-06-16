@@ -1,4 +1,3 @@
-// src/popup/popup.tsx - JAVÍTOTT VERZIÓ
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -16,22 +15,41 @@ interface StoreInfo {
 
 const Popup: React.FC = () => {
   const [databases, setDatabases] = React.useState<DatabaseInfo[]>([]);
-  const [selectedDb, setSelectedDb] = React.useState<string>('');
   const [stores, setStores] = React.useState<StoreInfo[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [expandedDb, setExpandedDb] = React.useState<string>('');
   const [error, setError] = React.useState<string>('');
 
-  const sendMessage = async (message: any) => {
+  const sendMessage = async (message: any): Promise<any> => {
     try {
+      // Get active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab.id) {
+      if (!tab || !tab.id) {
         throw new Error('No active tab found');
       }
+
+      console.log('Popup sending message:', message);
       
-      console.log('Sending message:', message);
+      // Inject content script if needed
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content-script.js']
+        });
+        console.log('Content script injected successfully');
+      } catch (injectError) {
+        console.log('Content script might already be injected:', injectError);
+      }
+
+      // Wait a bit for content script to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const response = await chrome.tabs.sendMessage(tab.id, message);
-      console.log('Received response:', response);
+      console.log('Popup received response:', response);
+      
+      if (!response) {
+        throw new Error('No response from content script. Try refreshing the page.');
+      }
       
       return response;
     } catch (error) {
@@ -50,7 +68,6 @@ const Popup: React.FC = () => {
       if (response && response.success) {
         console.log('Databases loaded:', response.data);
         
-        // Ensure each database has proper structure
         const formattedDatabases = (response.data || []).map((db: any) => ({
           name: db.name || 'Unknown',
           version: db.version || 1,
@@ -60,12 +77,21 @@ const Popup: React.FC = () => {
         
         setDatabases(formattedDatabases);
       } else {
-        console.error('Invalid response:', response);
-        setError(response?.error || 'Failed to load databases');
+        const errorMsg = response?.error || 'Failed to load databases';
+        console.error('Database loading failed:', errorMsg);
+        setError(errorMsg);
       }
     } catch (error) {
       console.error('Failed to load databases:', error);
-      setError('Failed to communicate with content script. Try refreshing the page.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      if (errorMessage.includes('Could not establish connection')) {
+        setError('Cannot connect to page. Please refresh the page and try again.');
+      } else if (errorMessage.includes('Content Security Policy')) {
+        setError('Page security prevents extension access. Try a different page.');
+      } else {
+        setError(`Communication error: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -85,7 +111,6 @@ const Popup: React.FC = () => {
       if (response && response.success) {
         console.log('Stores loaded:', response.data);
         
-        // Format store data properly
         const formattedStores = (response.data || []).map((store: any) => ({
           name: store.name || 'Unknown',
           recordCount: typeof store.recordCount === 'number' ? store.recordCount : 0
@@ -115,50 +140,14 @@ const Popup: React.FC = () => {
   };
 
   const openDevTools = () => {
-    // Inject a script to show a notification
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0].id) {
-        chrome.scripting.executeScript({
-          target: { tabId: tabs[0].id },
-          func: () => {
-            // Create notification
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-              position: fixed;
-              top: 20px;
-              right: 20px;
-              background: #007bff;
-              color: white;
-              padding: 12px 20px;
-              border-radius: 8px;
-              font-family: system-ui, sans-serif;
-              font-size: 14px;
-              font-weight: 500;
-              z-index: 10000;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-              animation: slideIn 0.3s ease;
-            `;
-            notification.innerHTML = '🔧 Open DevTools (F12) and switch to "IndexedDB Explorer" tab!';
-            
-            const style = document.createElement('style');
-            style.textContent = `
-              @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-              }
-            `;
-            document.head.appendChild(style);
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-              if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-              }
-              if (style.parentNode) {
-                style.parentNode.removeChild(style);
-              }
-            }, 4000);
-          }
+      if (tabs[0]?.id) {
+        // Show a simple alert instead of injecting complex scripts
+        chrome.tabs.sendMessage(tabs[0].id, { 
+          action: 'SHOW_DEVTOOLS_NOTIFICATION' 
+        }).catch(() => {
+          // If message fails, just close the popup
+          console.log('Could not send notification');
         });
       }
     });
@@ -166,11 +155,15 @@ const Popup: React.FC = () => {
     window.close();
   };
 
+  const retryConnection = async () => {
+    setError('');
+    await loadDatabases();
+  };
+
   React.useEffect(() => {
     loadDatabases();
   }, []);
 
-  // Calculate totals safely
   const totalTables = databases.reduce((sum, db) => sum + (db.storeCount || 0), 0);
   const totalRecords = stores.reduce((sum, store) => sum + (store.recordCount || 0), 0);
 
@@ -247,7 +240,21 @@ const Popup: React.FC = () => {
           fontSize: '12px',
           borderBottom: '1px solid #f5c6cb'
         }}>
-          ⚠️ {error}
+          <div style={{ marginBottom: '8px' }}>⚠️ {error}</div>
+          <button 
+            onClick={retryConnection}
+            style={{
+              padding: '4px 8px',
+              fontSize: '11px',
+              border: '1px solid #721c24',
+              borderRadius: '4px',
+              backgroundColor: 'transparent',
+              color: '#721c24',
+              cursor: 'pointer'
+            }}
+          >
+            🔄 Retry
+          </button>
         </div>
       )}
 
@@ -267,7 +274,7 @@ const Popup: React.FC = () => {
           }}>
             <div>🔄 Loading databases...</div>
           </div>
-        ) : databases.length === 0 ? (
+        ) : databases.length === 0 && !error ? (
           <div style={{ 
             textAlign: 'center',
             padding: '40px 0',
@@ -280,23 +287,8 @@ const Popup: React.FC = () => {
             <p style={{ margin: 0, fontSize: '12px' }}>
               This page doesn't use IndexedDB or databases are not accessible.
             </p>
-            <button 
-              onClick={loadDatabases}
-              style={{
-                marginTop: '12px',
-                padding: '6px 12px',
-                fontSize: '12px',
-                border: '1px solid #007bff',
-                borderRadius: '4px',
-                backgroundColor: '#007bff',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              🔄 Try Again
-            </button>
           </div>
-        ) : (
+        ) : !error && (
           <div>
             <div style={{ 
               display: 'flex', 
@@ -386,7 +378,7 @@ const Popup: React.FC = () => {
                         color: '#6c757d',
                         textAlign: 'center'
                       }}>
-                        {expandedDb === db.name ? 'Loading tables...' : 'Click to expand'}
+                        Loading tables...
                       </div>
                     )}
                   </div>
@@ -429,19 +421,6 @@ const Popup: React.FC = () => {
           💡 Use F12 → "IndexedDB Explorer" tab for full features
         </div>
       </div>
-      
-      {/* Debug Info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{
-          padding: '8px',
-          backgroundColor: '#f1f3f4',
-          fontSize: '10px',
-          color: '#5f6368',
-          borderTop: '1px solid #e8eaed'
-        }}>
-          Debug: {databases.length} DBs, {totalTables} tables, {error ? 'Error: ' + error : 'OK'}
-        </div>
-      )}
     </div>
   );
 };

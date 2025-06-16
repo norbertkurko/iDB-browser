@@ -1,4 +1,4 @@
-console.log('IndexedDB Explorer enhanced content script loaded');
+console.log('SharedIndexedDBService loaded');
 
 interface DatabaseInfo {
   name: string;
@@ -28,11 +28,17 @@ interface TableDataResponse {
   schema: StoreInfo;
 }
 
-class EnhancedIndexedDBAccess {
+export class SharedIndexedDBService {
   
   async getDatabases(): Promise<DatabaseInfo[]> {
     try {
       console.log('Getting databases...');
+      
+      if (!indexedDB.databases) {
+        console.warn('indexedDB.databases() not available');
+        return [];
+      }
+      
       const databases = await (indexedDB as any).databases() as Array<{name: string, version: number}>;
       console.log('Raw databases:', databases);
       
@@ -376,6 +382,16 @@ class EnhancedIndexedDBAccess {
     }
   }
 
+  async getSampleData(dbName: string, storeName: string, sampleSize: number = 3): Promise<any[]> {
+    try {
+      const response = await this.getTableData(dbName, storeName, { limit: sampleSize });
+      return response.data;
+    } catch (error) {
+      console.error('Error getting sample data:', error);
+      return [];
+    }
+  }
+
   private async openDatabase(name: string, version?: number): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(name, version);
@@ -410,139 +426,42 @@ class EnhancedIndexedDBAccess {
     return searchInValue(obj);
   }
 
-  async getSampleData(dbName: string, storeName: string, sampleSize: number = 3): Promise<any[]> {
-    try {
-      const response = await this.getTableData(dbName, storeName, { limit: sampleSize });
-      return response.data;
-    } catch (error) {
-      console.error('Error getting sample data:', error);
-      return [];
+  showDevToolsNotification(): void {
+    // Simple notification without complex DOM manipulation
+    const existingNotif = document.getElementById('idb-explorer-notification');
+    if (existingNotif) {
+      existingNotif.remove();
     }
+
+    const notification = document.createElement('div');
+    notification.id = 'idb-explorer-notification';
+    notification.style.cssText = `
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      background: #007bff !important;
+      color: white !important;
+      padding: 12px 20px !important;
+      border-radius: 8px !important;
+      font-family: system-ui, sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      z-index: 999999 !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+      max-width: 300px !important;
+      pointer-events: auto !important;
+    `;
+    notification.innerHTML = '🔧 Open DevTools (F12) and switch to "IndexedDB Explorer" tab!';
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 4000);
   }
 }
 
-const dbAccess = new EnhancedIndexedDBAccess();
-
-// Enhanced message handling with CRUD operations
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Content script received message:', request);
-  
-  (async () => {
-    try {
-      switch (request.action) {
-        case 'GET_DATABASES':
-          console.log('Processing GET_DATABASES');
-          const databases = await dbAccess.getDatabases();
-          sendResponse({ success: true, data: databases });
-          break;
-          
-        case 'GET_DATABASE_STORES':
-          console.log('Processing GET_DATABASE_STORES for:', request.dbName);
-          if (!request.dbName) {
-            sendResponse({ success: false, error: 'Database name is required' });
-            return;
-          }
-          const stores = await dbAccess.getDatabaseStores(request.dbName);
-          sendResponse({ success: true, data: stores });
-          break;
-          
-        case 'GET_TABLE_DATA':
-          console.log('Processing GET_TABLE_DATA for:', request.dbName, request.storeName);
-          if (!request.dbName || !request.storeName) {
-            sendResponse({ success: false, error: 'Database name and store name are required' });
-            return;
-          }
-          const tableData = await dbAccess.getTableData(
-            request.dbName, 
-            request.storeName, 
-            request.options || {}
-          );
-          sendResponse({ success: true, data: tableData });
-          break;
-          
-        case 'GET_SAMPLE_DATA':
-          console.log('Processing GET_SAMPLE_DATA for:', request.dbName, request.storeName);
-          if (!request.dbName || !request.storeName) {
-            sendResponse({ success: false, error: 'Database name and store name are required' });
-            return;
-          }
-          const sampleData = await dbAccess.getSampleData(
-            request.dbName, 
-            request.storeName, 
-            request.sampleSize || 3
-          );
-          sendResponse({ success: true, data: sampleData });
-          break;
-
-        // CRUD Operations
-        case 'CREATE_RECORD':
-          console.log('Processing CREATE_RECORD for:', request.dbName, request.storeName);
-          if (!request.dbName || !request.storeName || !request.record) {
-            sendResponse({ success: false, error: 'Database name, store name, and record are required' });
-            return;
-          }
-          const createdKey = await dbAccess.createRecord(
-            request.dbName,
-            request.storeName,
-            request.record
-          );
-          sendResponse({ success: true, data: { key: createdKey } });
-          break;
-
-        case 'UPDATE_RECORD':
-          console.log('Processing UPDATE_RECORD for:', request.dbName, request.storeName);
-          if (!request.dbName || !request.storeName || !request.record) {
-            sendResponse({ success: false, error: 'Database name, store name, and record are required' });
-            return;
-          }
-          await dbAccess.updateRecord(
-            request.dbName,
-            request.storeName,
-            request.record
-          );
-          sendResponse({ success: true, data: { message: 'Record updated successfully' } });
-          break;
-
-        case 'DELETE_RECORD':
-          console.log('Processing DELETE_RECORD for:', request.dbName, request.storeName);
-          if (!request.dbName || !request.storeName || !request.record) {
-            sendResponse({ success: false, error: 'Database name, store name, and record are required' });
-            return;
-          }
-          await dbAccess.deleteRecord(
-            request.dbName,
-            request.storeName,
-            request.record
-          );
-          sendResponse({ success: true, data: { message: 'Record deleted successfully' } });
-          break;
-
-        case 'GET_RECORD':
-          console.log('Processing GET_RECORD for:', request.dbName, request.storeName);
-          if (!request.dbName || !request.storeName || request.key === undefined) {
-            sendResponse({ success: false, error: 'Database name, store name, and key are required' });
-            return;
-          }
-          const record = await dbAccess.getRecord(
-            request.dbName,
-            request.storeName,
-            request.key
-          );
-          sendResponse({ success: true, data: record });
-          break;
-          
-        default:
-          console.error('Unknown action:', request.action);
-          sendResponse({ success: false, error: 'Unknown action: ' + request.action });
-      }
-    } catch (error) {
-      console.error('Content script error:', error);
-      sendResponse({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      });
-    }
-  })();
-  
-  return true; // Keep message channel open for async response
-});
+// Export singleton instance
+export const sharedIDBService = new SharedIndexedDBService();

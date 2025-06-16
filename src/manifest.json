@@ -10,41 +10,38 @@
     "storage"
   ],
   
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content-script.js"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   
   "devtools_page": "devtools.html",
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "IndexedDB Explorer",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "32": "icons/icon32.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
+    "default_title": "IndexedDB Explorer"
   },
   
-  "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   },
   
   "web_accessible_resources": [
     {
-      "resources": ["injected-script.js"],
+      "resources": ["*.js", "*.css", "*.html"],
       "matches": ["<all_urls>"]
     }
   ]

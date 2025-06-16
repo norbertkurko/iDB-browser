@@ -1,15 +1,17 @@
-// vite.config.ts - Updated with CSS handling
+// vite.config.ts - Fixed PostCSS configuration
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import tailwindcss from 'tailwindcss';
+import autoprefixer from 'autoprefixer';
 
 export default defineConfig({
   plugins: [react()],
   css: {
     postcss: {
       plugins: [
-        require('tailwindcss'),
-        require('autoprefixer'),
+        tailwindcss,
+        autoprefixer,
       ],
     },
   },
@@ -20,7 +22,8 @@ export default defineConfig({
         popup: resolve(__dirname, 'src/popup/popup.tsx'),
         panel: resolve(__dirname, 'src/panel/enhanced-panel.tsx'),
         background: resolve(__dirname, 'src/background/background.ts'),
-        'content-script': resolve(__dirname, 'src/content/enhanced-content-script.ts')
+        'content-script': resolve(__dirname, 'src/content/content-script.ts'),
+        'shared-idb-service': resolve(__dirname, 'src/content/shared-idb-service.ts')
       },
       output: {
         entryFileNames: '[name].js',
