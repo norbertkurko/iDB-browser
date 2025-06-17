@@ -35,7 +35,8 @@ export default defineConfig({
       input: {
         popup: resolve(__dirname, 'src/popup/popup.tsx'),
         background: resolve(__dirname, 'src/background/background.ts'),
-        'content-script': resolve(__dirname, 'src/content/content-script.ts')
+        'content-script': resolve(__dirname, 'src/content/content-script.ts'),
+        panel: resolve(__dirname, 'src/panel/enhanced-panel.tsx'),
       },
       output: {
         entryFileNames: '[name].js',

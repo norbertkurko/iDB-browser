@@ -26,8 +26,6 @@
     "service_worker": "background.js"
   },
   
-  "devtools_page": "devtools.html",
-  
   "action": {
     "default_popup": "popup.html",
     "default_title": "IndexedDB Explorer"
